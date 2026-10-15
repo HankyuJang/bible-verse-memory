@@ -1,0 +1,380 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="말씀 암송"><link rel="apple-touch-icon" href="apple-touch-icon.png"><style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style></head><body><title>말씀 암송</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one narrow reading column, like a pocket Bible page. Scripture in a brush-serif, controls in a quiet sans. */
+:root{
+  --bg:#ECEFEA; --surface:#F8F9F5; --ink:#1B2530; --muted:#5C6870; --line:#D3D9D2;
+  --accent:#1E5B6E; --accent-ink:#FFFFFF; --blank:#D6DDD5;
+  --new:#6F7A82; --almost:#A86A12; --done:#2B7A4B; --miss:#B3402F; --miss-bg:#F6DDD7;
+  --scripture:"IBM Plex Sans KR","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  --ui:"IBM Plex Sans KR","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#11171A; --surface:#192125; --ink:#E5EAE8; --muted:#94A1A4; --line:#2A353A;
+  --accent:#74BCCD; --accent-ink:#0D1A1E; --blank:#2C383D;
+  --new:#8F9BA1; --almost:#E2AB4E; --done:#6FC48E; --miss:#EE8E7F; --miss-bg:#45231E; color-scheme:dark } }
+:root[data-theme="dark"]{
+  --bg:#11171A; --surface:#192125; --ink:#E5EAE8; --muted:#94A1A4; --line:#2A353A;
+  --accent:#74BCCD; --accent-ink:#0D1A1E; --blank:#2C383D;
+  --new:#8F9BA1; --almost:#E2AB4E; --done:#6FC48E; --miss:#EE8E7F; --miss-bg:#45231E; color-scheme:dark }
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--ui);font-size:15px;line-height:1.6;word-break:keep-all}
+.app{max-width:680px;margin:0 auto;padding-inline:18px;padding-block:20px 64px;display:flex;flex-direction:column;gap:20px}
+button,input,textarea{font:inherit;color:inherit}
+button{cursor:pointer;background:none;border:0;padding:0}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.top{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.brand{font-family:var(--scripture);font-weight:700;font-size:26px;letter-spacing:-.01em}
+.sub{color:var(--muted);font-size:13px}
+.btn{display:inline-flex;align-items:center;justify-content:center;min-height:42px;padding:0 16px;border-radius:8px;border:1px solid var(--line);background:var(--surface);font-weight:500}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.ghost{background:none}
+.btn.danger{color:var(--miss);border-color:var(--miss)}
+.btn:disabled{opacity:.45;cursor:default}
+.link{color:var(--accent);font-weight:500;min-height:36px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.spread{justify-content:space-between}
+
+/* stage marks: shape carries the state as well as color */
+.st{display:inline-flex;align-items:center;gap:5px;font-size:12.5px;font-weight:600;white-space:nowrap}
+.st::before{font-size:13px}
+.st0{color:var(--new)} .st0::before{content:"○"}
+.st1{color:var(--almost)} .st1::before{content:"◐"}
+.st2{color:var(--done)} .st2::before{content:"●"}
+
+.filters{display:grid;grid-template-columns:repeat(4,1fr);border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--surface)}
+.filters button{padding:10px 4px;display:flex;flex-direction:column;align-items:center;gap:2px;border-left:1px solid var(--line);min-width:0}
+.filters button:first-child{border-left:0}
+.filters b{font-size:20px;font-weight:600;font-variant-numeric:tabular-nums;line-height:1.2}
+.filters span{font-size:12px;color:var(--muted)}
+.filters button[aria-pressed="true"]{background:var(--accent)}
+.filters button[aria-pressed="true"] b,.filters button[aria-pressed="true"] span{color:var(--accent-ink)}
+
+.list{display:flex;flex-direction:column;border-top:1px solid var(--line)}
+.item{display:grid;grid-template-columns:1fr auto;gap:2px 12px;text-align:left;padding:14px 2px;border-bottom:1px solid var(--line);width:100%}
+.item h3{margin:0;font-family:var(--scripture);font-size:19px;font-weight:700;min-width:0}
+.item p{margin:0;grid-column:1/-1;color:var(--muted);font-family:var(--scripture);font-size:14.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.item .meta{grid-column:1/-1;font-size:12px;color:var(--muted);display:flex;gap:10px;flex-wrap:wrap}
+.due{color:var(--accent);font-weight:600}
+.empty{padding:36px 8px;text-align:center;color:var(--muted);display:flex;flex-direction:column;gap:14px;align-items:center}
+.empty strong{font-family:var(--scripture);font-size:19px;color:var(--ink)}
+.empty p{margin:0;max-width:34em}
+
+label{font-size:13px;font-weight:600;display:flex;flex-direction:column;gap:6px}
+input[type=text],textarea{width:100%;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:11px 12px;font-size:16px}
+textarea{min-height:150px;resize:vertical;font-family:var(--scripture);line-height:1.8}
+.hint{font-size:12.5px;color:var(--muted);font-weight:400}
+form{display:flex;flex-direction:column;gap:16px}
+
+h2{font-family:var(--scripture);font-size:24px;margin:0;text-wrap:balance}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--surface);max-width:100%}
+.seg button{padding:8px 12px;font-size:13px;font-weight:500;border-left:1px solid var(--line);min-height:38px}
+.seg button:first-child{border-left:0}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+.tabs{display:flex;border-bottom:1px solid var(--line);gap:4px}
+.tabs button{padding:10px 12px;font-weight:600;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-1px}
+.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+.pane{display:flex;flex-direction:column;gap:16px}
+
+.verses{display:flex;flex-direction:column;gap:12px;margin:0;padding:0;list-style:none}
+.verse{display:grid;grid-template-columns:1.9em 1fr;gap:4px;font-family:var(--scripture);font-size:18px;line-height:1.9;letter-spacing:-.01em}
+.verse>.n{font-family:var(--ui);font-size:12px;font-weight:600;color:var(--accent);padding-top:.55em;font-variant-numeric:tabular-nums}
+.verse>div{min-width:0}
+.w{font-family:inherit;font-size:inherit;line-height:inherit;display:inline}
+.hid{color:transparent;background:var(--blank);border-radius:4px;user-select:none}
+.w.peek .hid{color:inherit;background:none;text-decoration:underline dotted var(--muted);text-underline-offset:5px}
+mark{background:var(--miss-bg);color:var(--miss);border-radius:3px;padding:0 1px}
+.pct{font-family:var(--ui);font-size:12px;font-weight:600;margin-left:6px;white-space:nowrap}
+.ok{color:var(--done)} .soso{color:var(--almost)} .bad{color:var(--miss)}
+.bar{display:block;height:.9em;margin-top:.55em;border-radius:4px;background:var(--blank);position:relative;overflow:hidden}
+.bar i{position:absolute;inset:0 auto 0 0;background:var(--accent);opacity:.55;transition:width .2s}
+@media (prefers-reduced-motion: reduce){.bar i{transition:none}}
+.listening{font-family:var(--ui);font-size:12px;color:var(--accent);font-weight:600}
+
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{font-family:var(--scripture);font-size:17px;padding:7px 12px;border:1px solid var(--line);border-radius:8px;background:var(--surface);min-height:42px}
+.chip.wrong{border-color:var(--miss);color:var(--miss)}
+.answer{font-family:var(--scripture);font-size:18.5px;line-height:1.9;min-height:3.8em;border-bottom:1px dashed var(--line);padding-bottom:8px}
+.answer em{font-style:normal;color:var(--muted)}
+.result{border:1px solid var(--line);border-radius:10px;background:var(--surface);padding:16px;display:flex;flex-direction:column;gap:8px}
+.result .big{font-size:34px;font-weight:600;font-variant-numeric:tabular-nums;line-height:1.1}
+.tip{font-size:13px;color:var(--muted);border-left:2px solid var(--accent);padding-left:10px;margin:0}
+#toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:8px;font-size:14px;max-width:calc(100% - 32px);z-index:5}
+</style>
+
+<div class="app">
+  <header class="top">
+    <button class="brand" data-act="home" aria-label="말씀 목록으로">말씀 암송</button>
+    <span class="sub" id="today"></span>
+  </header>
+  <main id="view" class="pane"></main>
+</div>
+<div id="toast" role="status" hidden></div>
+
+<script>
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const STAGES=['아직 안 외운 말씀','거의 외운 말씀','완전히 외운 말씀'], SHORT=['아직 안 외움','거의 외움','완전히 외움'];
+const GAP=[1,3,7], DAY=864e5;
+let passages=[], loaded=false, col=null, localMode=false;
+let ui={view:'home',filter:'all',id:null,tab:'learn',editId:null};
+let learn={mode:0,seed:1}, quiz=null, rec=null;
+
+const SEED=[{"best": 0.8813559322033898, "created": 1791351100000, "last": 1791352790317, "lastScore": 0.8813559322033898, "ref": "여호수아 1:9", "runs": 1, "stage": 1, "verses": [{"n": 9, "text": "내가 네게 명령한 것이 아니냐 강하고 담대하라 두려워하지 말며 놀라지 말라 네가 어디로 가든지 네 하나님 여호와가 너와 함께 하느니라 하시니라"}], "id": "josh-1-9"}, {"best": 0.9780219780219781, "created": 1791351240000, "last": 1791780709776, "lastScore": 0.9780219780219781, "ref": "창세기 1:1-5", "runs": 2, "stage": 2, "verses": [{"n": 1, "text": "태초에 하나님이 천지를 창조하시니라"}, {"n": 2, "text": "땅이 혼돈하고 공허하며 흑암이 깊음 위에 있고 하나님의 영은 수면 위에 운행하시니라"}, {"n": 3, "text": "하나님이 이르시되 빛이 있으라 하시니 빛이 있었고"}, {"n": 4, "text": "빛이 하나님이 보시기에 좋았더라 하나님이 빛과 어둠을 나누사"}, {"n": 5, "text": "하나님이 빛을 낮이라 부르시고 어둠을 밤이라 부르시니라 저녁이 되고 아침이 되니 이는 첫째 날이니라"}], "id": "gen-1-1-5"}, {"best": null, "created": 1791351300000, "last": null, "lastScore": null, "ref": "시편 1:1-6", "runs": 0, "stage": 0, "verses": [{"n": 1, "text": "복 있는 사람은 악인들의 꾀를 따르지 아니하며 죄인들의 길에 서지 아니하며 오만한 자들의 자리에 앉지 아니하고"}, {"n": 2, "text": "오직 여호와의 율법을 즐거워하여 그의 율법을 주야로 묵상하는도다"}, {"n": 3, "text": "그는 시냇가에 심은 나무가 철을 따라 열매를 맺으며 그 잎사귀가 마르지 아니함 같으니 그가 하는 모든 일이 다 형통하리로다"}, {"n": 4, "text": "악인들은 그렇지 아니함이여 오직 바람에 나는 겨와 같도다"}, {"n": 5, "text": "그러므로 악인들은 심판을 견디지 못하며 죄인들이 의인들의 모임에 들지 못하리로다"}, {"n": 6, "text": "무릇 의인들의 길은 여호와께서 인정하시나 악인들의 길은 망하리로다"}], "id": "ps-1-1-6"}, {"best": null, "created": 1791351360000, "last": null, "lastScore": null, "ref": "시편 23:1-6", "runs": 0, "stage": 0, "verses": [{"n": 1, "text": "여호와는 나의 목자시니 내게 부족함이 없으리로다"}, {"n": 2, "text": "그가 나를 푸른 풀밭에 누이시며 쉴 만한 물 가로 인도하시는도다"}, {"n": 3, "text": "내 영혼을 소생시키시고 자기 이름을 위하여 의의 길로 인도하시는도다"}, {"n": 4, "text": "내가 사망의 음침한 골짜기로 다닐지라도 해를 두려워하지 않을 것은 주께서 나와 함께 하심이라 주의 지팡이와 막대기가 나를 안위하시나이다"}, {"n": 5, "text": "주께서 내 원수의 목전에서 내게 상을 차려 주시고 기름을 내 머리에 부으셨으니 내 잔이 넘치나이다"}, {"n": 6, "text": "내 평생에 선하심과 인자하심이 반드시 나를 따르리니 내가 여호와의 집에 영원히 살리로다"}], "id": "ps-23-1-6"}, {"best": null, "created": 1791351420000, "last": null, "lastScore": null, "ref": "시편 119:9-12", "runs": 0, "stage": 0, "verses": [{"n": 9, "text": "청년이 무엇으로 그의 행실을 깨끗하게 하리이까 주의 말씀만 지킬 따름이니이다"}, {"n": 10, "text": "내가 전심으로 주를 찾았사오니 주의 계명에서 떠나지 말게 하소서"}, {"n": 11, "text": "내가 주께 범죄하지 아니하려 하여 주의 말씀을 내 마음에 두었나이다"}, {"n": 12, "text": "찬송을 받으실 주 여호와여 주의 율례들을 내게 가르치소서"}], "id": "ps-119-9-12"}, {"best": null, "created": 1791351480000, "last": null, "lastScore": null, "ref": "시편 119:105", "runs": 0, "stage": 0, "verses": [{"n": 105, "text": "주의 말씀은 내 발에 등이요 내 길에 빛이니이다"}], "id": "ps-119-105"}, {"best": 0.9565217391304348, "created": 1791351540000, "last": 1791780840255, "lastScore": 0.9565217391304348, "ref": "전도서 12:1", "runs": 2, "stage": 2, "verses": [{"n": 1, "text": "너는 청년의 때에 너의 창조주를 기억하라 곧 곤고한 날이 이르기 전에, 나는 아무 낙이 없다고 할 해들이 가깝기 전에"}], "id": "eccl-12-1"}, {"best": null, "created": 1791351600000, "last": null, "lastScore": null, "ref": "하박국 3:17-18", "runs": 0, "stage": 0, "verses": [{"n": 17, "text": "비록 무화과나무가 무성하지 못하며 포도나무에 열매가 없으며 감람나무에 소출이 없으며 밭에 먹을 것이 없으며 우리에 양이 없으며 외양간에 소가 없을지라도"}, {"n": 18, "text": "나는 여호와로 말미암아 즐거워하며 나의 구원의 하나님으로 말미암아 기뻐하리로다"}], "id": "hab-3-17-18"}, {"best": 1, "created": 1791382800000, "last": 1791781038334, "lastScore": 1, "ref": "사도행전 1:8", "runs": 1, "stage": 2, "verses": [{"n": 8, "text": "오직 성령이 너희에게 임하시면 너희가 권능을 받고 예루살렘과 온 유대와 사마리아와 땅 끝까지 이르러 내 증인이 되리라 하시니라"}], "id": "act-1-8"}, {"best": null, "created": 1791383880000, "last": null, "lastScore": null, "ref": "고린도전서 10:31", "runs": 0, "stage": 0, "verses": [{"n": 31, "text": "그런즉 너희가 먹든지 마시든지 무엇을 하든지 다 하나님의 영광을 위하여 하라"}], "id": "1co-10-31"}, {"best": null, "created": 1791383940000, "last": null, "lastScore": null, "ref": "에베소서 6:10-20", "runs": 0, "stage": 0, "verses": [{"n": 10, "text": "끝으로 너희가 주 안에서와 그 힘의 능력으로 강건하여지고"}, {"n": 11, "text": "마귀의 간계를 능히 대적하기 위하여 하나님의 전신 갑주를 입으라"}, {"n": 12, "text": "우리의 씨름은 혈과 육을 상대하는 것이 아니요 통치자들과 권세들과 이 어둠의 세상 주관자들과 하늘에 있는 악의 영들을 상대함이라"}, {"n": 13, "text": "그러므로 하나님의 전신 갑주를 취하라 이는 악한 날에 너희가 능히 대적하고 모든 일을 행한 후에 서기 위함이라"}, {"n": 14, "text": "그런즉 서서 진리로 너희 허리 띠를 띠고 의의 호심경을 붙이고"}, {"n": 15, "text": "평안의 복음이 준비한 것으로 신을 신고"}, {"n": 16, "text": "모든 것 위에 믿음의 방패를 가지고 이로써 능히 악한 자의 모든 불화살을 소멸하고"}, {"n": 17, "text": "구원의 투구와 성령의 검 곧 하나님의 말씀을 가지라"}, {"n": 18, "text": "모든 기도와 간구를 하되 항상 성령 안에서 기도하고 이를 위하여 깨어 구하기를 항상 힘쓰며 여러 성도를 위하여 구하라"}, {"n": 19, "text": "또 나를 위하여 구할 것은 내게 말씀을 주사 나로 입을 열어 복음의 비밀을 담대히 알리게 하옵소서 할 것이니"}, {"n": 20, "text": "이 일을 위하여 내가 쇠사슬에 매인 사신이 된 것은 나로 이 일에 당연히 할 말을 담대히 하게 하려 하심이라"}], "id": "eph-6-10-20"}, {"best": null, "created": 1791384120000, "last": null, "lastScore": null, "ref": "고린도전서 10:13", "runs": 0, "stage": 1, "verses": [{"n": 13, "text": "사람이 감당할 시험 밖에는 너희가 당한 것이 없나니 오직 하나님은 미쁘사 너희가 감당하지 못할 시험 당함을 허락하지 아니하시고 시험 당할 즈음에 또한 피할 길을 내사 너희로 능히 감당하게 하시느니라"}], "id": "1co-10-13"}, {"best": null, "created": 1791384140000, "last": null, "lastScore": null, "ref": "야고보서 1:14-15", "runs": 0, "stage": 0, "verses": [{"n": 14, "text": "오직 각 사람이 시험을 받는 것은 자기 욕심에 끌려 미혹됨이니"}, {"n": 15, "text": "욕심이 잉태한즉 죄를 낳고 죄가 장성한즉 사망을 낳느니라"}], "id": "jas-1-14-15"}, {"best": null, "created": 1791384190000, "last": null, "lastScore": null, "ref": "갈라디아서 5:22-23", "runs": 0, "stage": 0, "verses": [{"n": 22, "text": "오직 성령의 열매는 사랑과 희락과 화평과 오래 참음과 자비와 양선과 충성과"}, {"n": 23, "text": "온유와 절제니 이같은 것을 금지할 법이 없느니라"}], "id": "gal-5-22-23"}, {"best": null, "created": 1791384240000, "last": null, "lastScore": null, "ref": "로마서 1:16", "runs": 0, "stage": 0, "verses": [{"n": 16, "text": "내가 복음을 부끄러워하지 아니하노니 이 복음은 모든 믿는 자에게 구원을 주시는 하나님의 능력이 됨이라 먼저는 유대인에게요 그리고 헬라인에게로다"}], "id": "rom-1-16"}, {"best": null, "created": 1791384260000, "last": null, "lastScore": null, "ref": "베드로전서 3:15", "runs": 0, "stage": 0, "verses": [{"n": 15, "text": "너희 마음에 그리스도를 주로 삼아 거룩하게 하고 너희 속에 있는 소망에 관한 이유를 묻는 자에게는 대답할 것을 항상 준비하되 온유와 두려움으로 하고"}], "id": "1pe-3-15"}, {"best": null, "created": 1791384300000, "last": null, "lastScore": null, "ref": "고린도전서 13:1-13", "runs": 0, "stage": 0, "verses": [{"n": 1, "text": "내가 사람의 방언과 천사의 말을 할지라도 사랑이 없으면 소리 나는 구리와 울리는 꽹과리가 되고"}, {"n": 2, "text": "내가 예언하는 능력이 있어 모든 비밀과 모든 지식을 알고 또 산을 옮길 만한 모든 믿음이 있을지라도 사랑이 없으면 내가 아무 것도 아니요"}, {"n": 3, "text": "내가 내게 있는 모든 것으로 구제하고 또 내 몸을 불사르게 내줄지라도 사랑이 없으면 내게 아무 유익이 없느니라"}, {"n": 4, "text": "사랑은 오래 참고 사랑은 온유하며 시기하지 아니하며 사랑은 자랑하지 아니하며 교만하지 아니하며"}, {"n": 5, "text": "무례히 행하지 아니하며 자기의 유익을 구하지 아니하며 성내지 아니하며 악한 것을 생각하지 아니하며"}, {"n": 6, "text": "불의를 기뻐하지 아니하며 진리와 함께 기뻐하고"}, {"n": 7, "text": "모든 것을 참으며 모든 것을 믿으며 모든 것을 바라며 모든 것을 견디느니라"}, {"n": 8, "text": "사랑은 언제까지나 떨어지지 아니하되 예언도 폐하고 방언도 그치고 지식도 폐하리라"}, {"n": 9, "text": "우리는 부분적으로 알고 부분적으로 예언하니"}, {"n": 10, "text": "온전한 것이 올 때에는 부분적으로 하던 것이 폐하리라"}, {"n": 11, "text": "내가 어렸을 때에는 말하는 것이 어린 아이와 같고 깨닫는 것이 어린 아이와 같고 생각하는 것이 어린 아이와 같다가 장성한 사람이 되어서는 어린 아이의 일을 버렸노라"}, {"n": 12, "text": "우리가 지금은 거울로 보는 것 같이 희미하나 그 때에는 얼굴과 얼굴을 대하여 볼 것이요 지금은 내가 부분적으로 아나 그 때에는 주께서 나를 아신 것 같이 내가 온전히 알리라"}, {"n": 13, "text": "그런즉 믿음, 소망, 사랑, 이 세 가지는 항상 있을 것인데 그 중의 제일은 사랑이라"}], "id": "1co-13-1-13"}, {"best": null, "created": 1791384360000, "last": null, "lastScore": null, "ref": "요한복음 15:7", "runs": 0, "stage": 0, "verses": [{"n": 7, "text": "너희가 내 안에 거하고 내 말이 너희 안에 거하면 무엇이든지 원하는 대로 구하라 그리하면 이루리라"}], "id": "joh-15-7"}, {"best": null, "created": 1791384380000, "last": null, "lastScore": null, "ref": "빌립보서 4:6-7", "runs": 0, "stage": 0, "verses": [{"n": 6, "text": "아무 것도 염려하지 말고 다만 모든 일에 기도와 간구로, 너희 구할 것을 감사함으로 하나님께 아뢰라"}, {"n": 7, "text": "그리하면 모든 지각에 뛰어난 하나님의 평강이 그리스도 예수 안에서 너희 마음과 생각을 지키시리라"}], "id": "php-4-6-7"}, {"best": null, "created": 1791384700000, "last": null, "lastScore": null, "ref": "디모데후서 3:16-17", "runs": 0, "stage": 0, "verses": [{"n": 16, "text": "모든 성경은 하나님의 감동으로 된 것으로 교훈과 책망과 바르게 함과 의로 교육하기에 유익하니"}, {"n": 17, "text": "이는 하나님의 사람으로 온전하게 하며 모든 선한 일을 행할 능력을 갖추게 하려 함이라"}], "id": "2ti-3-16-17"}, {"best": null, "created": 1791384760000, "last": null, "lastScore": null, "ref": "요한복음 5:24", "runs": 0, "stage": 0, "verses": [{"n": 24, "text": "내가 진실로 진실로 너희에게 이르노니 내 말을 듣고 또 나 보내신 이를 믿는 자는 영생을 얻었고 심판에 이르지 아니하나니 사망에서 생명으로 옮겼느니라"}], "id": "joh-5-24"}, {"best": null, "created": 1791384780000, "last": null, "lastScore": null, "ref": "갈라디아서 2:20", "runs": 0, "stage": 0, "verses": [{"n": 20, "text": "내가 그리스도와 함께 십자가에 못 박혔나니 그런즉 이제는 내가 사는 것이 아니요 오직 내 안에 그리스도께서 사시는 것이라 이제 내가 육체 가운데 사는 것은 나를 사랑하사 나를 위하여 자기 자신을 버리신 하나님의 아들을 믿는 믿음 안에서 사는 것이라"}], "id": "gal-2-20"}, {"best": null, "created": 1791384820000, "last": null, "lastScore": null, "ref": "요한복음 15:5", "runs": 0, "stage": 0, "verses": [{"n": 5, "text": "나는 포도나무요 너희는 가지라 그가 내 안에, 내가 그 안에 거하면 사람이 열매를 많이 맺나니 나를 떠나서는 너희가 아무 것도 할 수 없음이라"}], "id": "joh-15-5"}, {"best": null, "created": 1791384840000, "last": null, "lastScore": null, "ref": "로마서 12:1", "runs": 0, "stage": 0, "verses": [{"n": 1, "text": "그러므로 형제들아 내가 하나님의 모든 자비하심으로 너희를 권하노니 너희 몸을 하나님이 기뻐하시는 거룩한 산 제물로 드리라 이는 너희가 드릴 영적 예배니라"}], "id": "rom-12-1"}, {"best": null, "created": 1791385000000, "last": null, "lastScore": null, "ref": "에베소서 5:25", "runs": 0, "stage": 0, "verses": [{"n": 25, "text": "남편들아 아내 사랑하기를 그리스도께서 교회를 사랑하시고 그 교회를 위하여 자신을 주심 같이 하라"}], "id": "eph-5-25"}, {"best": null, "created": 1791385660000, "last": null, "lastScore": null, "ref": "신명기 10:12-13", "runs": 0, "stage": 0, "verses": [{"n": 12, "text": "이스라엘아 네 하나님 여호와께서 네게 요구하시는 것이 무엇이냐 곧 네 하나님 여호와를 경외하여 그의 모든 도를 행하고 그를 사랑하며 마음을 다하고 뜻을 다하여 네 하나님 여호와를 섬기고"}, {"n": 13, "text": "내가 오늘 네 행복을 위하여 네게 명하는 여호와의 명령과 규례를 지킬 것이 아니냐"}], "id": "deut-10-12-13"}, {"best": null, "created": 1791385720000, "last": null, "lastScore": null, "ref": "호세아 4:6", "runs": 0, "stage": 0, "verses": [{"n": 6, "text": "내 백성이 지식이 없으므로 망하는도다 네가 지식을 버렸으니 나도 너를 버려 내 제사장이 되지 못하게 할 것이요 네가 네 하나님의 율법을 잊었으니 나도 네 자녀들을 잊어버리리라"}], "id": "hos-4-6"}, {"best": null, "created": 1791385740000, "last": null, "lastScore": null, "ref": "호세아 6:6", "runs": 0, "stage": 0, "verses": [{"n": 6, "text": "나는 인애를 원하고 제사를 원하지 아니하며 번제보다 하나님을 아는 것을 원하노라"}], "id": "hos-6-6"}, {"best": null, "created": 1791385780000, "last": null, "lastScore": null, "ref": "시편 63:6", "runs": 0, "stage": 0, "verses": [{"n": 6, "text": "내가 나의 침상에서 주를 기억하며 새벽에 주의 말씀을 작은 소리로 읊조릴 때에 하오리니"}], "id": "ps-63-6"}, {"best": null, "created": 1791385840000, "last": null, "lastScore": null, "ref": "여호수아 1:8", "runs": 0, "stage": 0, "verses": [{"n": 8, "text": "이 율법책을 네 입에서 떠나지 말게 하며 주야로 그것을 묵상하여 그 안에 기록된 대로 다 지켜 행하라 그리하면 네 길이 평탄하게 될 것이며 네가 형통하리라"}], "id": "josh-1-8"}, {"best": null, "created": 1791385860000, "last": null, "lastScore": null, "ref": "히브리서 4:12-13", "runs": 0, "stage": 0, "verses": [{"n": 12, "text": "하나님의 말씀은 살아 있고 활력이 있어 좌우에 날선 어떤 검보다도 예리하여 혼과 영과 및 관절과 골수를 찔러 쪼개기까지 하며 또 마음의 생각과 뜻을 판단하나니"}, {"n": 13, "text": "지으신 것이 하나도 그 앞에 나타나지 않음이 없고 우리의 결산을 받으실 이의 눈 앞에 만물이 벌거벗은 것 같이 드러나느니라"}], "id": "heb-4-12-13"}, {"best": null, "created": 1791385940000, "last": null, "lastScore": null, "ref": "디모데후서 3:15-17", "runs": 0, "stage": 0, "verses": [{"n": 15, "text": "또 어려서부터 성경을 알았나니 성경은 능히 너로 하여금 그리스도 예수 안에 있는 믿음으로 말미암아 구원에 이르는 지혜가 있게 하느니라"}, {"n": 16, "text": "모든 성경은 하나님의 감동으로 된 것으로 교훈과 책망과 바르게 함과 의로 교육하기에 유익하니"}, {"n": 17, "text": "이는 하나님의 사람으로 온전하게 하며 모든 선한 일을 행할 능력을 갖추게 하려 함이라"}], "id": "2ti-3-15-17"}, {"best": null, "created": 1791386020000, "last": null, "lastScore": null, "ref": "시편 34:8", "runs": 0, "stage": 0, "verses": [{"n": 8, "text": "너희는 여호와의 선하심을 맛보아 알지어다 그에게 피하는 자는 복이 있도다"}], "id": "ps-34-8"}, {"best": null, "created": 1791386080000, "last": null, "lastScore": null, "ref": "요한복음 3:16", "runs": 0, "stage": 0, "verses": [{"n": 16, "text": "하나님이 세상을 이처럼 사랑하사 독생자를 주셨으니 이는 그를 믿는 자마다 멸망하지 않고 영생을 얻게 하려 하심이라"}], "id": "joh-3-16"}, {"best": null, "created": 1791386100000, "last": null, "lastScore": null, "ref": "빌립보서 2:5-11", "runs": 0, "stage": 0, "verses": [{"n": 5, "text": "너희 안에 이 마음을 품으라 곧 그리스도 예수의 마음이니"}, {"n": 6, "text": "그는 근본 하나님의 본체시나 하나님과 동등됨을 취할 것으로 여기지 아니하시고"}, {"n": 7, "text": "오히려 자기를 비워 종의 형체를 가지사 사람들과 같이 되셨고"}, {"n": 8, "text": "사람의 모양으로 나타나사 자기를 낮추시고 죽기까지 복종하셨으니 곧 십자가에 죽으심이라"}, {"n": 9, "text": "이러므로 하나님이 그를 지극히 높여 모든 이름 위에 뛰어난 이름을 주사"}, {"n": 10, "text": "하늘에 있는 자들과 땅에 있는 자들과 땅 아래에 있는 자들로 모든 무릎을 예수의 이름에 꿇게 하시고"}, {"n": 11, "text": "모든 입으로 예수 그리스도를 주라 시인하여 하나님 아버지께 영광을 돌리게 하셨느니라"}], "id": "php-2-5-11"}, {"best": null, "created": 1791386120000, "last": null, "lastScore": null, "ref": "요한복음 14:6", "runs": 0, "stage": 0, "verses": [{"n": 6, "text": "예수께서 이르시되 내가 곧 길이요 진리요 생명이니 나로 말미암지 않고는 아버지께로 올 자가 없느니라"}], "id": "joh-14-6"}, {"best": null, "created": 1791386140000, "last": null, "lastScore": null, "ref": "이사야 53:5-6", "runs": 0, "stage": 0, "verses": [{"n": 5, "text": "그가 찔림은 우리의 허물 때문이요 그가 상함은 우리의 죄악 때문이라 그가 징계를 받으므로 우리는 평화를 누리고 그가 채찍에 맞으므로 우리는 나음을 받았도다"}, {"n": 6, "text": "우리는 다 양 같아서 그릇 행하여 각기 제 길로 갔거늘 여호와께서는 우리 모두의 죄악을 그에게 담당시키셨도다"}], "id": "isa-53-5-6"}, {"best": null, "created": 1791386200000, "last": null, "lastScore": null, "ref": "요한복음 14:26-27", "runs": 0, "stage": 0, "verses": [{"n": 26, "text": "보혜사 곧 아버지께서 내 이름으로 보내실 성령 그가 너희에게 모든 것을 가르치고 내가 너희에게 말한 모든 것을 생각나게 하리라"}, {"n": 27, "text": "평안을 너희에게 끼치노니 곧 나의 평안을 너희에게 주노라 내가 너희에게 주는 것은 세상이 주는 것과 같지 아니하니라 너희는 마음에 근심하지도 말고 두려워하지도 말라"}], "id": "joh-14-26-27"}, {"best": null, "created": 1791386220000, "last": null, "lastScore": null, "ref": "로마서 8:26-28", "runs": 0, "stage": 0, "verses": [{"n": 26, "text": "이와 같이 성령도 우리의 연약함을 도우시나니 우리는 마땅히 기도할 바를 알지 못하나 오직 성령이 말할 수 없는 탄식으로 우리를 위하여 친히 간구하시느니라"}, {"n": 27, "text": "마음을 살피시는 이가 성령의 생각을 아시나니 이는 성령이 하나님의 뜻대로 성도를 위하여 간구하심이니라"}, {"n": 28, "text": "우리가 알거니와 하나님을 사랑하는 자 곧 그의 뜻대로 부르심을 입은 자들에게는 모든 것이 합력하여 선을 이루느니라"}], "id": "rom-8-26-28"}, {"best": null, "created": 1791386260000, "last": null, "lastScore": null, "ref": "고린도전서 3:16", "runs": 0, "stage": 0, "verses": [{"n": 16, "text": "너희는 너희가 하나님의 성전인 것과 하나님의 성령이 너희 안에 계시는 것을 알지 못하느냐"}], "id": "1co-3-16"}, {"best": null, "created": 1791386320000, "last": null, "lastScore": null, "ref": "마태복음 28:19-20", "runs": 0, "stage": 0, "verses": [{"n": 19, "text": "그러므로 너희는 가서 모든 민족을 제자로 삼아 아버지와 아들과 성령의 이름으로 세례를 베풀고"}, {"n": 20, "text": "내가 너희에게 분부한 모든 것을 가르쳐 지키게 하라 볼지어다 내가 세상 끝날까지 너희와 항상 함께 있으리라 하시니라"}], "id": "mat-28-19-20"}, {"best": null, "created": 1791386380000, "last": null, "lastScore": null, "ref": "로마서 3:23-24", "runs": 0, "stage": 0, "verses": [{"n": 23, "text": "모든 사람이 죄를 범하였으매 하나님의 영광에 이르지 못하더니"}, {"n": 24, "text": "그리스도 예수 안에 있는 속량으로 말미암아 하나님의 은혜로 값 없이 의롭다 하심을 얻은 자 되었느니라"}], "id": "rom-3-23-24"}, {"best": null, "created": 1791386400000, "last": null, "lastScore": null, "ref": "로마서 6:23", "runs": 0, "stage": 0, "verses": [{"n": 23, "text": "죄의 삯은 사망이요 하나님의 은사는 그리스도 예수 우리 주 안에 있는 영생이니라"}], "id": "rom-6-23"}, {"best": null, "created": 1791386420000, "last": null, "lastScore": null, "ref": "로마서 5:8", "runs": 0, "stage": 0, "verses": [{"n": 8, "text": "우리가 아직 죄인 되었을 때에 그리스도께서 우리를 위하여 죽으심으로 하나님께서 우리에 대한 자기의 사랑을 확증하셨느니라"}], "id": "rom-5-8"}, {"best": null, "created": 1791386440000, "last": null, "lastScore": null, "ref": "로마서 10:9-10", "runs": 0, "stage": 0, "verses": [{"n": 9, "text": "네가 만일 네 입으로 예수를 주로 시인하며 또 하나님께서 그를 죽은 자 가운데서 살리신 것을 네 마음에 믿으면 구원을 받으리라"}, {"n": 10, "text": "사람이 마음으로 믿어 의에 이르고 입으로 시인하여 구원에 이르느니라"}], "id": "rom-10-9-10"}, {"best": null, "created": 1791386460000, "last": null, "lastScore": null, "ref": "로마서 8:1-2", "runs": 0, "stage": 0, "verses": [{"n": 1, "text": "그러므로 이제 그리스도 예수 안에 있는 자에게는 결코 정죄함이 없나니"}, {"n": 2, "text": "이는 그리스도 예수 안에 있는 생명의 성령의 법이 죄와 사망의 법에서 너를 해방하였음이라"}], "id": "rom-8-1-2"}, {"best": null, "created": 1791386500000, "last": null, "lastScore": null, "ref": "마태복음 10:32-33", "runs": 0, "stage": 0, "verses": [{"n": 32, "text": "누구든지 사람 앞에서 나를 시인하면 나도 하늘에 계신 내 아버지 앞에서 그를 시인할 것이요"}, {"n": 33, "text": "누구든지 사람 앞에서 나를 부인하면 나도 하늘에 계신 내 아버지 앞에서 그를 부인하리라"}], "id": "mat-10-32-33"}, {"best": null, "created": 1791386560000, "last": null, "lastScore": null, "ref": "로마서 14:8", "runs": 0, "stage": 0, "verses": [{"n": 8, "text": "우리가 살아도 주를 위하여 살고 죽어도 주를 위하여 죽나니 그러므로 사나 죽으나 우리가 주의 것이로다"}], "id": "rom-14-8"}, {"best": null, "created": 1791386580000, "last": null, "lastScore": null, "ref": "요한복음 17:3", "runs": 0, "stage": 0, "verses": [{"n": 3, "text": "영생은 곧 유일하신 참 하나님과 그가 보내신 자 예수 그리스도를 아는 것이니이다"}], "id": "joh-17-3"}, {"best": null, "created": 1791386620000, "last": null, "lastScore": null, "ref": "요한일서 2:15-17", "runs": 0, "stage": 0, "verses": [{"n": 15, "text": "이 세상이나 세상에 있는 것들을 사랑하지 말라 누구든지 세상을 사랑하면 아버지의 사랑이 그 안에 있지 아니하니"}, {"n": 16, "text": "이는 세상에 있는 모든 것이 육신의 정욕과 안목의 정욕과 이생의 자랑이니 다 아버지께로부터 온 것이 아니요 세상으로부터 온 것이라"}, {"n": 17, "text": "이 세상도, 그 정욕도 지나가되 오직 하나님의 뜻을 행하는 자는 영원히 거하느니라"}], "id": "1jo-2-15-17"}, {"best": null, "created": 1791386640000, "last": null, "lastScore": null, "ref": "마태복음 6:33-34", "runs": 0, "stage": 0, "verses": [{"n": 33, "text": "그런즉 너희는 먼저 그의 나라와 그의 의를 구하라 그리하면 이 모든 것을 너희에게 더하시리라"}, {"n": 34, "text": "그러므로 내일 일을 위하여 염려하지 말라 내일 일은 내일이 염려할 것이요 한 날의 괴로움은 그 날로 족하니라"}], "id": "mat-6-33-34"}, {"best": null, "created": 1791386660000, "last": null, "lastScore": null, "ref": "데살로니가전서 5:16-22", "runs": 0, "stage": 0, "verses": [{"n": 16, "text": "항상 기뻐하라"}, {"n": 17, "text": "쉬지 말고 기도하라"}, {"n": 18, "text": "범사에 감사하라 이것이 그리스도 예수 안에서 너희를 향하신 하나님의 뜻이니라"}, {"n": 19, "text": "성령을 소멸하지 말며"}, {"n": 20, "text": "예언을 멸시하지 말고"}, {"n": 21, "text": "범사에 헤아려 좋은 것을 취하고"}, {"n": 22, "text": "악은 어떤 모양이라도 버리라"}], "id": "1th-5-16-22"}, {"best": null, "created": 1791386680000, "last": null, "lastScore": null, "ref": "디모데전서 2:4", "runs": 0, "stage": 0, "verses": [{"n": 4, "text": "하나님은 모든 사람이 구원을 받으며 진리를 아는 데에 이르기를 원하시느니라"}], "id": "1ti-2-4"}, {"best": null, "created": 1791386700000, "last": null, "lastScore": null, "ref": "마가복음 9:29", "runs": 0, "stage": 0, "verses": [{"n": 29, "text": "이르시되 기도 외에 다른 것으로는 이런 종류가 나갈 수 없느니라 하시니라"}], "id": "mar-9-29"}, {"best": null, "created": 1791386720000, "last": null, "lastScore": null, "ref": "요한복음 13:15", "runs": 0, "stage": 0, "verses": [{"n": 15, "text": "내가 너희에게 행한 것 같이 너희도 행하게 하려 하여 본을 보였노라"}], "id": "joh-13-15"}, {"best": null, "created": 1791386740000, "last": null, "lastScore": null, "ref": "디모데전서 4:5", "runs": 0, "stage": 0, "verses": [{"n": 5, "text": "하나님의 말씀과 기도로 거룩하여짐이라"}], "id": "1ti-4-5"}, {"best": null, "created": 1791386760000, "last": null, "lastScore": null, "ref": "예레미야 33:3", "runs": 0, "stage": 0, "verses": [{"n": 3, "text": "너는 내게 부르짖으라 내가 네게 응답하겠고 네가 알지 못하는 크고 은밀한 일을 네게 보이리라"}], "id": "jer-33-3"}, {"best": null, "created": 1791386780000, "last": null, "lastScore": null, "ref": "마태복음 7:7-8", "runs": 0, "stage": 0, "verses": [{"n": 7, "text": "구하라 그리하면 너희에게 주실 것이요 찾으라 그리하면 찾아낼 것이요 문을 두드리라 그리하면 너희에게 열릴 것이니"}, {"n": 8, "text": "구하는 이마다 받을 것이요 찾는 이는 찾아낼 것이요 두드리는 이에게는 열릴 것이니라"}], "id": "mat-7-7-8"}, {"best": null, "created": 1791386800000, "last": null, "lastScore": null, "ref": "마가복음 11:24", "runs": 0, "stage": 0, "verses": [{"n": 24, "text": "그러므로 내가 너희에게 말하노니 무엇이든지 기도하고 구하는 것은 받은 줄로 믿으라 그리하면 너희에게 그대로 되리라"}], "id": "mar-11-24"}];
+/* ---------- storage ---------- */
+const LS='malsseum-passages';
+function readLocal(){try{return JSON.parse(localStorage.getItem(LS))||[]}catch(e){return[]}}
+function writeLocal(){try{localStorage.setItem(LS,JSON.stringify(passages))}catch(e){}}
+const chains={};
+function persist(p){
+  if(col){const {id,...body}=p;
+    chains[id]=(chains[id]||Promise.resolve()).then(()=>col.doc(id).set(body)).catch(()=>toast('저장하지 못했습니다. 연결을 확인하고 다시 시도해 주세요.'));
+  }else writeLocal();
+}
+function removePassage(id){
+  passages=passages.filter(p=>p.id!==id);
+  if(col)col.doc(id).delete().catch(()=>toast('삭제하지 못했습니다. 다시 시도해 주세요.'));else writeLocal();
+}
+function newId(){return col?col.doc().id:'p'+Date.now().toString(36)}
+const cur=()=>passages.find(p=>p.id===ui.id);
+const isDue=p=>!p.last||Date.now()-p.last>=GAP[p.stage]*DAY;
+
+/* ---------- text helpers ---------- */
+const norm=s=>s.replace(/[^\p{L}\p{N}]/gu,'');
+function startVerse(ref){const m=ref.match(/(\d+)\s*(?:[:：]|장|편)\s*(\d+)/);return m?+m[2]:1}
+function parseVerses(raw,start){
+  const text=raw.replace(/\r/g,'').trim(); if(!text)return[];
+  const re=/(^|\s)(\d{1,3})(?:절|[.:)])?\s*(?=[^\d\s])/g, marks=[]; let m;
+  while((m=re.exec(text)))marks.push({num:+m[2],at:m.index+m[1].length,end:re.lastIndex});
+  const chain=first=>{const c=[];let e=first;for(const k of marks)if(k.num===e){c.push(k);e++}return c};
+  let cuts=chain(start), lead=false;
+  if(!cuts.length){cuts=chain(start+1);lead=cuts.length>0}
+  if(!cuts.length&&marks.length&&start===1){cuts=chain(marks[0].num)}
+  const clean=s=>s.replace(/\s+/g,' ').trim();
+  if(!cuts.length)return text.split(/\n+/).map(clean).filter(Boolean).map((t,i)=>({n:start+i,text:t}));
+  const out=[];
+  if(lead){const t=clean(text.slice(0,cuts[0].at));if(t)out.push({n:start,text:t})}
+  cuts.forEach((c,i)=>{const t=clean(text.slice(c.end,i+1<cuts.length?cuts[i+1].at:text.length));if(t)out.push({n:c.num,text:t})});
+  return out;
+}
+function rng(seed){let a=seed>>>0;return()=>{a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+function shuffle(a,r=Math.random){a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(r()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+
+/* distance from verse t to every prefix of s */
+function prefixDist(t,s){
+  let prev=Array.from({length:s.length+1},(_,j)=>j);
+  for(let i=1;i<=t.length;i++){const c=[i];for(let j=1;j<=s.length;j++)c[j]=Math.min(prev[j]+1,c[j-1]+1,prev[j-1]+(t[i-1]===s[j-1]?0:1));prev=c}
+  return prev;
+}
+/* walk the spoken text verse by verse */
+function align(verses,input,final){
+  let pos=0,active=false;const out=[];
+  for(const v of verses){
+    const t=norm(v.text),rest=input.slice(pos);
+    if(active||!rest.length){out.push({st:final?'skip':'wait',sim:0});continue}
+    const win=rest.slice(0,Math.ceil(t.length*1.4)+4),d=prefixDist(t,win);
+    let bj=Math.min(win.length,Math.floor(t.length*.5));
+    for(let j=bj;j<=win.length;j++)if(d[j]<d[bj])bj=j;
+    const sim=Math.max(0,1-d[bj]/Math.max(t.length,bj));
+    const moved=final||rest.length>=t.length*1.25;
+    if(sim>=.93||(moved&&sim>=.45)){out.push({st:'done',sim,seg:rest.slice(0,bj)});pos+=bj}
+    else if(moved)out.push({st:'skip',sim:0});
+    else{out.push({st:'now',prog:Math.min(1,rest.length/t.length)});active=true}
+  }
+  return out;
+}
+/* original verse with the parts that were not said marked */
+function markMiss(text,seg){
+  const idx=[];let t='';
+  for(let i=0;i<text.length;i++)if(/[\p{L}\p{N}]/u.test(text[i])){idx.push(i);t+=text[i]}
+  const n=t.length,m=seg.length,L=Array.from({length:n+1},()=>new Uint16Array(m+1));
+  for(let i=n-1;i>=0;i--)for(let j=m-1;j>=0;j--)L[i][j]=t[i]===seg[j]?L[i+1][j+1]+1:Math.max(L[i+1][j],L[i][j+1]);
+  const miss=new Set();let i=0,j=0;
+  while(i<n){if(j<m&&t[i]===seg[j]){i++;j++}else if(j<m&&L[i][j+1]>=L[i+1][j])j++;else{miss.add(idx[i]);i++}}
+  let h='',open=false;const letter=new Set(idx);
+  for(let k=0;k<text.length;k++){
+    if(letter.has(k)){const b=miss.has(k);if(b&&!open){h+='<mark>';open=true}if(!b&&open){h+='</mark>';open=false}}
+    else if(open&&text[k]===' '){h+='</mark>';open=false}
+    h+=esc(text[k]);
+  }
+  return h+(open?'</mark>':'');
+}
+
+/* ---------- views ---------- */
+function toast(msg){const t=$('#toast');t.textContent=msg;t.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>t.hidden=true,3200)}
+function ago(ts){if(!ts)return'아직 연습 전';const d=Math.floor((Date.now()-ts)/DAY);return d<1?'오늘 연습함':d+'일 전 연습'}
+function render(){
+  const v=$('#view');
+  if(ui.view==='home')v.innerHTML=homeHTML();
+  else if(ui.view==='form'){v.innerHTML=formHTML();preview()}
+  else if(ui.view==='passage'){const p=cur();if(!p){ui.view='home';return render()}v.innerHTML=passageHTML(p);if(ui.tab==='recite')updateRecite()}
+}
+function homeHTML(){
+  if(!loaded)return`<div class="empty"><p>말씀을 불러오는 중…</p></div>`;
+  const cnt=[0,1,2].map(s=>passages.filter(p=>p.stage===s).length);
+  const f=ui.filter;
+  const list=passages.filter(p=>f==='all'||p.stage===+f).sort((a,b)=>(isDue(b)-isDue(a))||(a.stage-b.stage)||(a.created-b.created));
+  const fb=(k,n,l)=>`<button data-act="filter" data-f="${k}" aria-pressed="${f===String(k)}"><b>${n}</b><span>${l}</span></button>`;
+  let h=`<div class="filters" role="group" aria-label="암송 단계">${fb('all',passages.length,'전체')}${fb(0,cnt[0],'아직')}${fb(1,cnt[1],'거의')}${fb(2,cnt[2],'완전히')}</div>
+  <div class="row spread"><span class="sub">${f==='all'?'등록한 모든 말씀':STAGES[+f]}</span><button class="btn primary" data-act="add">말씀 추가</button></div>`;
+  if(!passages.length)h+=`<div class="empty"><strong>첫 암송 말씀을 추가해 보세요</strong><p>성경 앱에서 개역개정 본문을 복사해 붙여넣으면 절 번호를 읽어 한 절씩 나눕니다. 추가한 말씀은 여기에 단계별로 모입니다.</p></div>`;
+  else if(!list.length)h+=`<div class="empty"><p>이 단계에 해당하는 말씀이 아직 없습니다.</p></div>`;
+  else h+=`<div class="list">${list.map(p=>`<button class="item" data-act="open" data-id="${esc(p.id)}">
+      <h3>${esc(p.ref)}</h3><span class="st st${p.stage}">${SHORT[p.stage]}</span>
+      <p>${esc(p.verses[0]?.text||'')}</p>
+      <span class="meta"><span>${p.verses.length}절</span><span>${ago(p.last)}</span>${p.best!=null?`<span>최고 ${Math.round(p.best*100)}%</span>`:''}${isDue(p)?'<span class="due">오늘 복습</span>':''}</span>
+    </button>`).join('')}</div>`;
+  if(localMode)h+=`<p class="tip">지금은 이 기기의 브라우저에만 저장됩니다.</p>`;
+  return h;
+}
+function formHTML(){
+  const p=ui.editId?passages.find(x=>x.id===ui.editId):null;
+  const text=p?p.verses.map(v=>v.n+' '+v.text).join('\n'):'';
+  return`<div class="row spread"><h2>${p?'말씀 고치기':'말씀 추가'}</h2><button class="link" data-act="${p?'open':'home'}" data-id="${p?esc(p.id):''}">취소</button></div>
+  <form id="f" autocomplete="off">
+    <label for="f-ref">말씀 주소<input type="text" id="f-ref" placeholder="예: 시편 23:1-6" value="${p?esc(p.ref):''}"></label>
+    <label for="f-text">본문 <span class="hint">성경 앱에서 복사해 그대로 붙여넣으세요. 절 번호가 있으면 자동으로 나눕니다. 번호가 없으면 한 줄을 한 절로 봅니다.</span>
+      <textarea id="f-text" placeholder="1 …&#10;2 …&#10;3 …">${esc(text)}</textarea></label>
+    <div><div class="sub" id="pv-count"></div><ol class="verses" id="pv"></ol></div>
+    <div class="row"><button class="btn primary" id="f-save" type="submit">저장</button>
+    ${p?`<span id="del"><button class="btn danger" type="button" data-act="del-ask">삭제</button></span>`:''}</div>
+  </form>`;
+}
+function formVerses(){const ref=$('#f-ref').value.trim();return{ref,verses:parseVerses($('#f-text').value,startVerse(ref))}}
+function preview(){
+  const {ref,verses}=formVerses();
+  $('#pv-count').textContent=verses.length?`${verses.length}절로 나눴습니다. 다르게 나뉘었다면 본문의 절 번호를 확인해 주세요.`:'';
+  $('#pv').innerHTML=verses.map(v=>`<li class="verse"><span class="n">${v.n}</span><div>${esc(v.text)}</div></li>`).join('');
+  $('#f-save').disabled=!ref||!verses.length;
+}
+function passageHTML(p){
+  const tab=(k,l)=>`<button role="tab" data-act="tab" data-t="${k}" aria-selected="${ui.tab===k}">${l}</button>`;
+  return`<div class="row spread"><button class="link" data-act="home">‹ 목록</button><button class="link" data-act="edit">고치기</button></div>
+  <h2>${esc(p.ref)}</h2>
+  <div class="row"><div class="seg" role="group" aria-label="암송 단계">${[0,1,2].map(s=>`<button data-act="stage" data-s="${s}" aria-pressed="${p.stage===s}">${SHORT[s]}</button>`).join('')}</div>
+  <span class="sub">${ago(p.last)}${p.lastScore!=null?` · 최근 ${Math.round(p.lastScore*100)}%`:''}</span></div>
+  <div class="tabs" role="tablist">${tab('learn','익히기')}${tab('quiz','순서 퀴즈')}${tab('recite','암송 확인')}</div>
+  <div class="pane">${ui.tab==='learn'?learnHTML(p):ui.tab==='quiz'?quizHTML(p):reciteHTML(p)}</div>`;
+}
+function wordHTML(w,mode,hide){
+  if(hide)return`<button class="w" data-act="peek"><span class="hid">${esc(w)}</span></button>`;
+  return esc(w);
+}
+function learnHTML(p){
+  const m=learn.mode,ratio=[0,.35,.7][m],r=rng(learn.seed*7919+p.verses.length);
+  const modes=['전체 보기','조금 가리기','많이 가리기'];
+  return`<div class="row"><div class="seg" role="group" aria-label="가리기">${modes.map((l,i)=>`<button data-act="mode" data-m="${i}" aria-pressed="${m===i}">${l}</button>`).join('')}</div>
+    ${m?`<button class="link" data-act="reseed">다른 단어 가리기</button>`:''}</div>
+  ${m?`<p class="tip">가려진 곳을 속으로 채우며 소리 내어 읽어 보세요. 누르면 잠깐 보입니다.</p>`:`<p class="tip">먼저 소리 내어 세 번 읽고, 조금씩 가려 가며 반복하세요.</p>`}
+  <ol class="verses">${p.verses.map(v=>`<li class="verse"><span class="n">${v.n}</span><div>${v.text.split(/\s+/).map(w=>wordHTML(w,m,r()<ratio)).join(' ')}</div></li>`).join('')}</ol>`;
+}
+function startQuiz(p){quiz={k:0,n:0,miss:0,total:0,pool:[],wrong:-1,done:false};loadQuizVerse(p)}
+function loadQuizVerse(p){const W=p.verses[quiz.k].text.split(/\s+/);quiz.W=W;quiz.n=0;quiz.pool=shuffle(W.map((_,i)=>i));quiz.total+=W.length}
+function quizHTML(p){
+  if(!quiz)startQuiz(p);
+  if(quiz.done){const s=Math.max(0,1-quiz.miss/quiz.total);
+    return`<div class="result"><span class="sub">순서 퀴즈 결과</span><span class="big ${s>=.9?'ok':s>=.7?'soso':'bad'}">${Math.round(s*100)}%</span>
+    <span>${quiz.total}개 단어 중 ${quiz.miss}번 틀렸습니다.</span></div>
+    <div class="row"><button class="btn primary" data-act="quiz-again">다시 풀기</button><button class="btn" data-act="tab" data-t="recite">암송 확인으로</button></div>`}
+  const v=p.verses[quiz.k],W=quiz.W;
+  return`<div class="row spread"><span class="sub">${v.n}절 · ${quiz.k+1}/${p.verses.length}</span><span class="sub">틀린 횟수 ${quiz.miss}</span></div>
+  <div class="answer">${quiz.n?esc(W.slice(0,quiz.n).join(' ')):'<em>아래 단어를 순서대로 누르세요.</em>'}</div>
+  <div class="chips">${quiz.pool.map(i=>`<button class="chip${quiz.wrong===i?' wrong':''}" data-act="chip" data-i="${i}">${esc(W[i])}</button>`).join('')}</div>`;
+}
+function reciteHTML(p){
+  if(!rec)rec={hints:0,hinted:{},final:false,res:[],text:''};
+  const top=rec.final?resultHTML(p):`<p class="tip">아래 칸을 누른 뒤 키보드의 마이크 버튼을 눌러 말씀을 처음부터 암송하세요. 직접 입력해도 됩니다. 한 절을 마칠 때마다 맞았는지 바로 표시합니다.</p>`;
+  return`${top}
+  <ol class="verses" id="rv"></ol>
+  <label for="r-in">내가 암송한 말씀<textarea id="r-in" ${rec.final?'disabled':''} placeholder="여기에 말하거나 입력하세요">${esc(rec.text)}</textarea></label>
+  <div class="row">${rec.final?`<button class="btn primary" data-act="rec-again">다시 암송</button><button class="btn" data-act="home">목록으로</button>`
+    :`<button class="btn primary" data-act="rec-finish">채점하기</button><button class="btn" data-act="rec-hint">힌트 보기</button><button class="btn ghost" data-act="rec-clear">지우기</button>`}</div>`;
+}
+function resultHTML(p){
+  const s=rec.score,cls=s>=.95?'ok':s>=.75?'soso':'bad';
+  return`<div class="result"><span class="sub">암송 결과</span><span class="big ${cls}">${Math.round(s*100)}%</span>
+  <span class="st st${p.stage}">${STAGES[p.stage]}</span>
+  <span class="sub">${rec.hints?`힌트를 ${rec.hints}번 봤습니다. 힌트 없이 95% 이상이면 완전히 외운 말씀이 됩니다.`:s>=.95?'힌트 없이 끝까지 암송했습니다.':'95% 이상이면 완전히 외운 말씀, 75% 이상이면 거의 외운 말씀이 됩니다.'}</span></div>`;
+}
+function updateRecite(){
+  const p=cur(),box=$('#rv');if(!p||!box||!rec)return;
+  if(!rec.final)rec.res=align(p.verses,norm(rec.text),false);
+  let firstOpen=true;
+  box.innerHTML=p.verses.map((v,i)=>{
+    const r=rec.res[i]||{st:'wait'};let body;
+    if(r.st==='done'){const pc=Math.round(r.sim*100);body=`${markMiss(v.text,r.seg)}<span class="pct ${pc>=95?'ok':pc>=75?'soso':'bad'}">${pc>=95?'✓':''} ${pc}%</span>`}
+    else if(r.st==='skip')body=`<mark>${esc(v.text)}</mark><span class="pct bad">빠짐</span>`;
+    else{
+      const hint=rec.hinted[i]?v.text.split(/\s+/).map(w=>esc(w[0])+'<span class="hid">'+esc(w.slice(1))+'</span>').join(' '):'';
+      body=hint||`<span class="bar"><i style="width:${r.st==='now'?Math.round(r.prog*100):0}%"></i></span>`;
+      if(r.st==='now'||(firstOpen&&rec.text))body+=`<span class="listening"> 듣는 중</span>`;
+      firstOpen=false;
+    }
+    return`<li class="verse"><span class="n">${v.n}</span><div>${body}</div></li>`}).join('');
+}
+function finishRecite(){
+  const p=cur();rec.res=align(p.verses,norm(rec.text),true);rec.final=true;
+  rec.score=rec.res.reduce((a,r)=>a+r.sim,0)/p.verses.length;
+  const s=rec.score;
+  p.stage=s>=.95&&!rec.hints?2:s>=.75?1:Math.min(p.stage,1);
+  p.lastScore=s;p.best=Math.max(p.best||0,s);p.runs=(p.runs||0)+1;p.last=Date.now();
+  persist(p);render();window.scrollTo(0,0);
+}
+
+/* ---------- events ---------- */
+const acts={
+  home(){ui.view='home';render()},
+  add(){ui.view='form';ui.editId=null;render()},
+  edit(){ui.view='form';ui.editId=ui.id;render()},
+  filter(el){ui.filter=el.dataset.f;render()},
+  open(el){ui.view='passage';ui.id=el.dataset.id||ui.id;ui.tab='learn';learn.mode=0;quiz=null;rec=null;render();window.scrollTo(0,0)},
+  tab(el){ui.tab=el.dataset.t;if(ui.tab==='quiz')quiz=null;if(ui.tab==='recite')rec=null;render()},
+  stage(el){const p=cur();p.stage=+el.dataset.s;persist(p);render()},
+  mode(el){learn.mode=+el.dataset.m;render()},
+  reseed(){learn.seed++;render()},
+  peek(el){el.classList.toggle('peek')},
+  chip(el){const p=cur(),i=+el.dataset.i;
+    if(quiz.W[i]===quiz.W[quiz.n]){quiz.pool=quiz.pool.filter(x=>x!==i);quiz.n++;quiz.wrong=-1;
+      if(quiz.n===quiz.W.length){if(quiz.k+1<p.verses.length){quiz.k++;loadQuizVerse(p)}else{quiz.done=true;p.last=Date.now();persist(p)}}
+    }else{quiz.miss++;quiz.wrong=i}
+    render()},
+  'quiz-again'(){quiz=null;render()},
+  'rec-finish'(){if(!norm(rec.text)){toast('먼저 말씀을 암송해 주세요.');return}finishRecite()},
+  'rec-hint'(){const i=rec.res.findIndex(r=>r.st==='now'||r.st==='wait');if(i<0)return;if(!rec.hinted[i]){rec.hinted[i]=true;rec.hints++}updateRecite()},
+  'rec-clear'(){rec.text='';$('#r-in').value='';updateRecite();$('#r-in').focus()},
+  'rec-again'(){rec=null;render()},
+  'del-ask'(){$('#del').innerHTML=`<span class="sub">이 말씀을 지울까요?</span> <button class="btn danger" type="button" data-act="del-yes">지우기</button> <button class="btn" type="button" data-act="del-no">그대로 두기</button>`},
+  'del-no'(){render()},
+  'del-yes'(){removePassage(ui.editId);ui.view='home';render();toast('삭제했습니다.')}
+};
+document.addEventListener('click',e=>{const el=e.target.closest('[data-act]');if(el&&acts[el.dataset.act])acts[el.dataset.act](el)});
+let deb;
+document.addEventListener('input',e=>{
+  if(e.target.id==='f-ref'||e.target.id==='f-text')preview();
+  if(e.target.id==='r-in'&&rec){rec.text=e.target.value;clearTimeout(deb);deb=setTimeout(updateRecite,120)}
+});
+document.addEventListener('submit',e=>{
+  e.preventDefault();const {ref,verses}=formVerses();if(!ref||!verses.length)return;
+  let p=ui.editId&&passages.find(x=>x.id===ui.editId);
+  if(p){p.ref=ref;p.verses=verses}
+  else{p={id:newId(),ref,verses,stage:0,created:Date.now(),last:null,best:null,lastScore:null,runs:0};passages.push(p)}
+  persist(p);ui.id=p.id;acts.open({dataset:{}});toast('저장했습니다.');
+});
+
+/* ---------- boot ---------- */
+$('#today').textContent=new Date().toLocaleDateString('ko-KR',{month:'long',day:'numeric',weekday:'short'});
+render();
+(async()=>{
+  let db=null;try{db=window.claude&&window.claude.use?await window.claude.use('db'):null}catch(e){}
+  if(db){col=db.collection('passages');
+    col.onSnapshot(s=>{passages=s.docs.map(d=>({id:d.id,...JSON.parse(JSON.stringify(d.data()))}));const first=!loaded;loaded=true;if(first||ui.view==='home')render()},
+      ()=>{loaded=true;render();toast('말씀 목록을 불러오지 못했습니다. 페이지를 새로 고쳐 주세요.')});
+  }else{passages=readLocal();
+    let seeded=false;try{seeded=localStorage.getItem(LS+'-seeded')==='1'}catch(e){}
+    if(!seeded&&!passages.length){passages=JSON.parse(JSON.stringify(SEED));writeLocal();try{localStorage.setItem(LS+'-seeded','1')}catch(e){}}
+    loaded=true;localMode=true;render()}
+})();
+</script>
+</body></html>

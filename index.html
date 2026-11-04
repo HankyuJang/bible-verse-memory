@@ -123,7 +123,7 @@ const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',
 const STAGES=['아직 안 외운 말씀','거의 외운 말씀','완전히 외운 말씀'], SHORT=['아직 안 외움','거의 외움','완전히 외움'];
 const GAP=[1,3,7], DAY=864e5;
 let passages=[], loaded=false, col=null, localMode=false;
-const PROGRAMS=[{id:'adhoc',name:'Adhoc'},{id:'one-on-one',name:'일대일 제자양육'}], DEFAULT_PROGRAM='adhoc';
+const PROGRAMS=[{id:'adhoc',name:'나의 암송 말씀'},{id:'one-on-one',name:'일대일 제자양육'}], DEFAULT_PROGRAM='adhoc';
 let ui={view:'programs',program:null,filter:'all',id:null,tab:'learn',editId:null};
 let learn={mode:0,seed:1}, quiz=null, rec=null;
 

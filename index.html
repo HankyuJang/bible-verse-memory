@@ -322,42 +322,53 @@ function quizHTML(p){
   <div class="answer">${quiz.n?esc(W.slice(0,quiz.n).join(' ')):'<em>아래 단어를 순서대로 누르세요.</em>'}</div>
   <div class="chips">${quiz.pool.map(i=>`<button class="chip${quiz.wrong===i?' wrong':''}" data-act="chip" data-i="${i}">${esc(W[i])}</button>`).join('')}</div>`;
 }
+/* recitation goes one verse at a time, like the order quiz */
 function reciteHTML(p){
-  if(!rec)rec={hints:0,hinted:{},final:false,res:[],text:''};
-  const top=rec.final?resultHTML(p):`<p class="tip">아래 칸을 누른 뒤 키보드의 마이크 버튼을 눌러 말씀을 처음부터 암송하세요. 직접 입력해도 됩니다. 한 절을 마칠 때마다 맞았는지 바로 표시합니다.</p>`;
-  return`${top}
+  if(!rec)rec={k:0,text:'',graded:false,res:[],hints:0,hinted:{},retries:0,final:false};
+  if(rec.final)return`${resultHTML(p)}
   <ol class="verses" id="rv"></ol>
-  <label for="r-in">내가 암송한 말씀<textarea id="r-in" ${rec.final?'disabled':''} placeholder="여기에 말하거나 입력하세요">${esc(rec.text)}</textarea></label>
-  <div class="row">${rec.final?`<button class="btn primary" data-act="rec-again">다시 암송</button><button class="btn" data-act="home">목록으로</button>`
-    :`<button class="btn primary" data-act="rec-finish">채점하기</button><button class="btn" data-act="rec-hint">힌트 보기</button><button class="btn ghost" data-act="rec-clear">지우기</button>`}</div>`;
+  <div class="row"><button class="btn primary" data-act="rec-again">다시 암송</button><button class="btn" data-act="home">목록으로</button></div>`;
+  const total=p.verses.length,multi=total>1,v=p.verses[rec.k],last=rec.k+1===total;
+  return`${multi?`<div class="row spread"><span class="sub">${v.n}절 · ${rec.k+1}/${total}</span>${rec.hints?`<span class="sub">힌트 ${rec.hints}번</span>`:''}</div>`:''}
+  ${rec.graded?'':`<p class="tip">아래 칸을 누른 뒤 키보드의 마이크 버튼을 눌러 ${multi?'이 절을':'말씀을'} 암송하세요. 직접 입력해도 됩니다. 마치면 채점하기를 누르세요.</p>`}
+  <ol class="verses" id="rv"></ol>
+  <label for="r-in">내가 암송한 말씀<textarea id="r-in" ${rec.graded?'disabled':''} placeholder="여기에 말하거나 입력하세요">${esc(rec.text)}</textarea></label>
+  <div class="row">${rec.graded?`<button class="btn primary" data-act="rec-next">${last?'결과 보기':'다음 절'}</button><button class="btn" data-act="rec-retry">이 절 다시</button>`
+    :`<button class="btn primary" data-act="rec-finish">채점하기</button><button class="btn" data-act="rec-hint">힌트 보기</button><button class="btn ghost" data-act="rec-clear">지우기</button>${multi?`<button class="btn ghost" data-act="rec-skip">건너뛰기</button>`:''}`}</div>`;
 }
 function resultHTML(p){
-  const s=rec.score,cls=s>=.95?'ok':s>=.75?'soso':'bad';
+  const s=rec.score,cls=s>=.95?'ok':s>=.75?'soso':'bad',clean=!rec.hints&&!rec.retries;
+  const note=clean&&s>=.95?'힌트 없이 끝까지 암송했습니다.':!clean?`${rec.hints?`힌트 ${rec.hints}번`:''}${rec.hints&&rec.retries?', ':''}${rec.retries?`다시 암송 ${rec.retries}번`:''}이 있었습니다. 힌트나 다시 암송 없이 95% 이상이면 완전히 외운 말씀이 됩니다.`:'95% 이상이면 완전히 외운 말씀, 75% 이상이면 거의 외운 말씀이 됩니다.';
   return`<div class="result"><span class="sub">암송 결과</span><span class="big ${cls}">${Math.round(s*100)}%</span>
   <span class="st st${p.stage}">${STAGES[p.stage]}</span>
-  <span class="sub">${rec.hints?`힌트를 ${rec.hints}번 봤습니다. 힌트 없이 95% 이상이면 완전히 외운 말씀이 됩니다.`:s>=.95?'힌트 없이 끝까지 암송했습니다.':'95% 이상이면 완전히 외운 말씀, 75% 이상이면 거의 외운 말씀이 됩니다.'}</span></div>`;
+  <span class="sub">${note}</span></div>`;
+}
+function gradedRow(v,r){
+  let body;
+  if(r&&r.st==='done'){const pc=Math.round(r.sim*100);body=`${markMiss(v.text,r.seg)}<span class="pct ${pc>=95?'ok':pc>=75?'soso':'bad'}">${pc>=95?'✓':''} ${pc}%</span>`}
+  else body=`<mark>${esc(v.text)}</mark><span class="pct bad">빠짐</span>`;
+  return`<li class="verse"><span class="n">${v.n}</span><div>${body}</div></li>`;
 }
 function updateRecite(){
   const p=cur(),box=$('#rv');if(!p||!box||!rec)return;
-  if(!rec.final)rec.res=align(p.verses,norm(rec.text),false);
-  let firstOpen=true;
-  box.innerHTML=p.verses.map((v,i)=>{
-    const r=rec.res[i]||{st:'wait'};let body;
-    if(r.st==='done'){const pc=Math.round(r.sim*100);body=`${markMiss(v.text,r.seg)}<span class="pct ${pc>=95?'ok':pc>=75?'soso':'bad'}">${pc>=95?'✓':''} ${pc}%</span>`}
-    else if(r.st==='skip')body=`<mark>${esc(v.text)}</mark><span class="pct bad">빠짐</span>`;
-    else{
-      const hint=rec.hinted[i]?v.text.split(/\s+/).map(w=>esc(w[0])+'<span class="hid">'+esc(w.slice(1))+'</span>').join(' '):'';
-      body=hint||`<span class="bar"><i style="width:${r.st==='now'?Math.round(r.prog*100):0}%"></i></span>`;
-      if(r.st==='now'||(firstOpen&&rec.text))body+=`<span class="listening"> 듣는 중</span>`;
-      firstOpen=false;
-    }
-    return`<li class="verse"><span class="n">${v.n}</span><div>${body}</div></li>`}).join('');
+  if(rec.final){box.innerHTML=p.verses.map((v,i)=>gradedRow(v,rec.res[i])).join('');return}
+  const v=p.verses[rec.k];
+  if(rec.graded){box.innerHTML=gradedRow(v,rec.res[rec.k]);return}
+  const said=norm(rec.text),prog=Math.min(1,said.length/Math.max(1,norm(v.text).length));
+  const hint=rec.hinted[rec.k]?v.text.split(/\s+/).map(w=>esc(w[0])+'<span class="hid">'+esc(w.slice(1))+'</span>').join(' '):'';
+  box.innerHTML=`<li class="verse"><span class="n">${v.n}</span><div>${hint||`<span class="bar"><i style="width:${Math.round(prog*100)}%"></i></span>`}${said?'<span class="listening"> 듣는 중</span>':''}</div></li>`;
+}
+function gradeVerse(p){
+  const t=norm(p.verses[rec.k].text),said=norm(rec.text),d=prefixDist(t,said)[said.length];
+  rec.res[rec.k]={st:'done',sim:Math.max(0,1-d/Math.max(t.length,said.length)),seg:said};
+  if(p.verses.length===1)return finishRecite();
+  rec.graded=true;render();window.scrollTo(0,0);
 }
 function finishRecite(){
-  const p=cur();rec.res=align(p.verses,norm(rec.text),true);rec.final=true;
-  rec.score=rec.res.reduce((a,r)=>a+r.sim,0)/p.verses.length;
+  const p=cur();rec.final=true;
+  rec.score=p.verses.reduce((a,_,i)=>a+(rec.res[i]?.sim||0),0)/p.verses.length;
   const s=rec.score;
-  p.stage=s>=.95&&!rec.hints?2:s>=.75?1:Math.min(p.stage,1);
+  p.stage=s>=.95&&!rec.hints&&!rec.retries?2:s>=.75?1:Math.min(p.stage,1);
   p.lastScore=s;p.best=Math.max(p.best||0,s);p.runs=(p.runs||0)+1;p.last=Date.now();
   persist(p);render();window.scrollTo(0,0);
 }
@@ -382,8 +393,11 @@ const acts={
     }else{quiz.miss++;quiz.wrong=i}
     render()},
   'quiz-again'(){quiz=null;render()},
-  'rec-finish'(){if(!norm(rec.text)){toast('먼저 말씀을 암송해 주세요.');return}finishRecite()},
-  'rec-hint'(){const i=rec.res.findIndex(r=>r.st==='now'||r.st==='wait');if(i<0)return;if(!rec.hinted[i]){rec.hinted[i]=true;rec.hints++}updateRecite()},
+  'rec-finish'(){if(!norm(rec.text)){toast('먼저 말씀을 암송해 주세요.');return}gradeVerse(cur())},
+  'rec-hint'(){if(!rec.hinted[rec.k]){rec.hinted[rec.k]=true;rec.hints++}updateRecite()},
+  'rec-skip'(){rec.res[rec.k]={st:'skip',sim:0};rec.graded=true;render();window.scrollTo(0,0)},
+  'rec-next'(){const p=cur();if(rec.k+1>=p.verses.length)return finishRecite();rec.k++;rec.text='';rec.graded=false;render();window.scrollTo(0,0);$('#r-in').focus()},
+  'rec-retry'(){rec.res[rec.k]=null;rec.text='';rec.graded=false;rec.retries++;render();$('#r-in').focus()},
   'rec-clear'(){rec.text='';$('#r-in').value='';updateRecite();$('#r-in').focus()},
   'rec-again'(){rec=null;render()},
   'del-ask'(){$('#del').innerHTML=`<span class="sub">이 말씀을 지울까요?</span> <button class="btn danger" type="button" data-act="del-yes">지우기</button> <button class="btn" type="button" data-act="del-no">그대로 두기</button>`},

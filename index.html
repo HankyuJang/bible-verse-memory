@@ -175,6 +175,19 @@ function parseVerses(raw,start){
   cuts.forEach((c,i)=>{const t=clean(text.slice(c.end,i+1<cuts.length?cuts[i+1].at:text.length));if(t)out.push({n:c.num,text:t})});
   return out;
 }
+/* "[시42:1-3, 우리말성경] ..." as copied from the Bible app */
+const BOOKS={창:'창세기',출:'출애굽기',레:'레위기',민:'민수기',신:'신명기',수:'여호수아',삿:'사사기',룻:'룻기',삼상:'사무엘상',삼하:'사무엘하',왕상:'열왕기상',왕하:'열왕기하',대상:'역대상',대하:'역대하',스:'에스라',느:'느헤미야',에:'에스더',욥:'욥기',시:'시편',잠:'잠언',전:'전도서',아:'아가',사:'이사야',렘:'예레미야',애:'예레미야애가',겔:'에스겔',단:'다니엘',호:'호세아',욜:'요엘',암:'아모스',옵:'오바댜',욘:'요나',미:'미가',나:'나훔',합:'하박국',습:'스바냐',학:'학개',슥:'스가랴',말:'말라기',마:'마태복음',막:'마가복음',눅:'누가복음',요:'요한복음',행:'사도행전',롬:'로마서',고전:'고린도전서',고후:'고린도후서',갈:'갈라디아서',엡:'에베소서',빌:'빌립보서',골:'골로새서',살전:'데살로니가전서',살후:'데살로니가후서',딤전:'디모데전서',딤후:'디모데후서',딛:'디도서',몬:'빌레몬서',히:'히브리서',약:'야고보서',벧전:'베드로전서',벧후:'베드로후서',요일:'요한일서',요이:'요한이서',요삼:'요한삼서',유:'유다서',계:'요한계시록'};
+function parseCopied(raw){
+  const m=String(raw).replace(/\r/g,'').match(/^\s*\[\s*([^\]\d\s,]+)\s*(\d+)\s*[:：]\s*(\d+)((?:\s*[-~–]\s*\d+(?:\s*[:：]\s*\d+)?)?)\s*(?:,[^\]]*)?\]\s*([\s\S]*)$/);
+  if(!m)return null;
+  const body=m[5].trim(),range=m[4].replace(/\s/g,'').replace(/[~–]/,'-');
+  if(!body)return null;
+  return{ref:`${BOOKS[m[1]]||m[1]} ${m[2]}:${m[3]}${range}`,text:range||/^\d+\s/.test(body)?body:`${m[3]} ${body}`};
+}
+function applyCopied(raw){
+  const c=parseCopied(raw);if(!c)return false;
+  $('#f-ref').value=c.ref;$('#f-text').value=c.text;preview();return true;
+}
 function rng(seed){let a=seed>>>0;return()=>{a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
 function shuffle(a,r=Math.random){a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(r()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
 
@@ -273,6 +286,7 @@ function formHTML(){
   const text=p?p.verses.map(v=>v.n+' '+v.text).join('\n'):'';
   return`<div class="row spread"><h2>${p?'말씀 고치기':'말씀 추가'}</h2><button class="link" data-act="${p?'open':'home'}" data-id="${p?esc(p.id):''}">취소</button></div>
   <form id="f" autocomplete="off">
+    ${p?'':`<div class="row"><button class="btn" type="button" data-act="paste">복사한 말씀 붙여넣기</button><span class="hint">성경 앱에서 복사한 말씀의 주소와 본문을 채워 줍니다.</span></div>`}
     <label for="f-ref">말씀 주소<input type="text" id="f-ref" placeholder="예: 시편 23:1-6" value="${p?esc(p.ref):''}"></label>
     <label for="f-text">본문 <span class="hint">성경 앱에서 복사해 그대로 붙여넣으세요. 절 번호가 있으면 자동으로 나눕니다. 번호가 없으면 한 줄을 한 절로 봅니다.</span>
       <textarea id="f-text" placeholder="1 …&#10;2 …&#10;3 …">${esc(text)}</textarea></label>
@@ -377,6 +391,10 @@ function finishRecite(){
 const acts={
   programs(){ui.view='programs';render();window.scrollTo(0,0)},
   program(el){ui.program=el.dataset.p;ui.filter='all';ui.view='home';render();window.scrollTo(0,0)},
+  async paste(){
+    let t='';try{t=await navigator.clipboard.readText()}catch(e){toast('클립보드를 읽지 못했습니다. 본문 칸을 길게 눌러 붙여넣어 주세요.');$('#f-text').focus();return}
+    if(!applyCopied(t))toast('복사한 내용에서 말씀 주소를 찾지 못했습니다.');
+  },
   home(){ui.view='home';render()},
   add(){ui.view='form';ui.editId=null;render()},
   edit(){ui.view='form';ui.editId=ui.id;render()},
@@ -407,7 +425,7 @@ const acts={
 document.addEventListener('click',e=>{const el=e.target.closest('[data-act]');if(el&&acts[el.dataset.act])acts[el.dataset.act](el)});
 let deb;
 document.addEventListener('input',e=>{
-  if(e.target.id==='f-ref'||e.target.id==='f-text')preview();
+  if(e.target.id==='f-ref'||e.target.id==='f-text'){if(!applyCopied(e.target.value))preview()}
   if(e.target.id==='r-in'&&rec){rec.text=e.target.value;clearTimeout(deb);deb=setTimeout(updateRecite,120)}
 });
 document.addEventListener('submit',e=>{

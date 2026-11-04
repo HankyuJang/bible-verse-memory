@@ -122,7 +122,7 @@ mark{background:var(--miss-bg);color:var(--miss);border-radius:3px;padding:0 1px
 
 <div class="app">
   <header class="top">
-    <button class="brand" data-act="programs" aria-label="프로그램 선택으로">말씀 암송</button>
+    <button class="brand" data-act="programs" aria-label="Home으로">말씀 암송</button>
     <span class="sub" id="today"></span>
   </header>
   <main id="view" class="pane"></main>
@@ -289,7 +289,7 @@ function homeHTML(){
   const f=ui.filter;
   const list=all.filter(p=>f==='all'||p.stage===+f).sort((a,b)=>(isDue(b)-isDue(a))||(a.stage-b.stage)||(a.created-b.created));
   const fb=(k,n,l)=>`<button data-act="filter" data-f="${k}" aria-pressed="${f===String(k)}"><b>${n}</b><span>${l}</span></button>`;
-  let h=`<div class="row spread"><button class="link" data-act="programs">‹ 프로그램</button></div>
+  let h=`<div class="row spread"><button class="link" data-act="programs">‹ Home</button></div>
   <h2>${esc(programName(ui.program))}</h2>
   <div class="filters" role="group" aria-label="암송 단계">${fb('all',all.length,'전체')}${fb(0,cnt[0],'아직')}${fb(1,cnt[1],'거의')}${fb(2,cnt[2],'완전히')}</div>
   ${ui.program==='one-on-one'?'':`<div class="row spread"><span class="sub">${f==='all'?'등록한 모든 말씀':STAGES[+f]}</span><button class="btn primary" data-act="add">말씀 추가</button></div>`}`;

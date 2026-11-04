@@ -58,8 +58,15 @@ button{cursor:pointer;background:none;border:0;padding:0}
 .item p{margin:0;grid-column:1/-1;color:var(--muted);font-family:var(--scripture);font-size:14.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
 .item .meta{grid-column:1/-1;font-size:12px;color:var(--muted);display:flex;gap:10px;flex-wrap:wrap}
 .due{color:var(--accent);font-weight:600}
+.hero{display:flex;flex-direction:column;align-items:center;text-align:center;gap:6px;padding-top:calc(16px + env(safe-area-inset-top,0px))}
+.hero img{width:104px;height:104px;border-radius:50%;object-fit:cover;box-shadow:0 0 0 5px var(--surface),0 0 0 6px var(--line);margin-bottom:12px}
+.hero h1{margin:0;font-family:var(--scripture);font-size:28px;font-weight:700;letter-spacing:-.01em}
+.verse-day{margin:8px 0 12px;padding:0 6px;text-align:center;display:flex;flex-direction:column;gap:8px}
+.verse-day p{margin:0;font-family:var(--scripture);font-size:17px;line-height:1.85;text-wrap:pretty}
+.verse-day cite{font-style:normal;font-size:13px;font-weight:500;color:var(--accent)}
+.verse-day::before{content:"";width:28px;height:1px;background:var(--accent);opacity:.5;margin:0 auto 10px}
 .programs{display:flex;flex-direction:column;gap:12px}
-.program{display:flex;flex-direction:column;gap:6px;width:100%;text-align:left;padding:18px 16px;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
+.program{display:flex;flex-direction:column;gap:6px;width:100%;text-align:left;padding:18px 18px;border:1px solid var(--line);border-radius:14px;background:var(--surface)}
 .program h3{margin:0;font-family:var(--scripture);font-size:20px;font-weight:700}
 .program .meta{font-size:12.5px;color:var(--muted);display:flex;gap:10px;flex-wrap:wrap}
 .empty{padding:36px 8px;text-align:center;color:var(--muted);display:flex;flex-direction:column;gap:14px;align-items:center}
@@ -216,15 +223,25 @@ function toast(msg){const t=$('#toast');t.textContent=msg;t.hidden=false;clearTi
 function ago(ts){if(!ts)return'아직 연습 전';const d=Math.floor((Date.now()-ts)/DAY);return d<1?'오늘 연습함':d+'일 전 연습'}
 function render(){
   const v=$('#view');
+  document.querySelector('.top').hidden=ui.view==='programs';
   if(ui.view==='programs')v.innerHTML=programsHTML();
   else if(ui.view==='home'&&!ui.program){ui.view='programs';return render()}
   else if(ui.view==='home')v.innerHTML=homeHTML();
   else if(ui.view==='form'){v.innerHTML=formHTML();preview()}
   else if(ui.view==='passage'){const p=cur();if(!p){ui.view='home';return render()}v.innerHTML=passageHTML(p);if(ui.tab==='recite')updateRecite()}
 }
+/* one short verse from the user's own passages, the same all day */
+function verseOfDay(){
+  const pool=passages.flatMap(p=>p.verses.length===1&&p.verses[0].text.length<=90?[p]:[]);
+  if(!pool.length)return null;
+  const d=new Date(),day=Math.floor((Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()))/DAY);
+  return pool.slice().sort((a,b)=>a.ref.localeCompare(b.ref))[day%pool.length];
+}
 function programsHTML(){
   if(!loaded)return`<div class="empty"><p>말씀을 불러오는 중…</p></div>`;
-  return`<h2>프로그램을 선택하세요</h2>
+  const vd=verseOfDay();
+  return`<div class="hero"><img src="apple-touch-icon.png?v=3" alt=""><h1>말씀 암송</h1><span class="sub">${esc($('#today').textContent)}</span></div>
+  ${vd?`<blockquote class="verse-day" style="margin-inline:0"><p>${esc(vd.verses[0].text)}</p><cite>${esc(vd.ref)}</cite></blockquote>`:''}
   <div class="programs">${PROGRAMS.map(x=>{
     const ps=inProgram(x.id),done=ps.filter(p=>p.stage===2).length,due=ps.filter(isDue).length;
     return`<button class="program" data-act="program" data-p="${esc(x.id)}"><h3>${esc(x.name)}</h3>

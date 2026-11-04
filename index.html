@@ -304,7 +304,7 @@ function homeHTML(){
     CURRICULUM.filter((c,i,a)=>a.findIndex(x=>x.week===c.week)===i).forEach(c=>{
       const ps=list.filter(p=>p.week===c.week).sort((a,b)=>a.created-b.created);
       if(!ps.length)return;
-      h+=`<section class="week"><div class="week-head"><h3>${c.week}주차</h3>${c.week===now?'<span class="now">지금 외울 말씀</span>':''}<span class="sub">${esc(c.meeting)} · ${esc(c.topic)}</span></div><div class="list">${ps.map(itemHTML).join('')}</div></section>`;
+      h+=`<section class="week"><div class="week-head"><h3>${esc(c.meeting)} ${esc(c.topic)}</h3>${c.week===now?'<span class="now">지금 외울 말씀</span>':''}</div><div class="list">${ps.map(itemHTML).join('')}</div></section>`;
     });
     const extra=list.filter(p=>!p.week);
     if(extra.length)h+=`<section class="week"><div class="week-head"><h3>직접 추가한 말씀</h3></div><div class="list">${extra.map(itemHTML).join('')}</div></section>`;
@@ -340,7 +340,7 @@ function preview(){
 function passageHTML(p){
   const tab=(k,l)=>`<button role="tab" data-act="tab" data-t="${k}" aria-selected="${ui.tab===k}">${l}</button>`;
   return`<div class="row spread"><button class="link" data-act="home">‹ 목록</button>${p.week?'':'<button class="link" data-act="edit">고치기</button>'}</div>
-  ${p.week?`<span class="sub">${p.week}주차 · ${esc(p.topic)}</span>`:''}
+  ${p.week?`<span class="sub">${esc(p.meeting)} ${esc(p.topic)}</span>`:''}
   <h2>${esc(p.ref)}</h2>
   <div class="row"><div class="seg" role="group" aria-label="암송 단계">${[0,1,2].map(s=>`<button data-act="stage" data-s="${s}" aria-pressed="${p.stage===s}">${SHORT[s]}</button>`).join('')}</div>
   <span class="sub">${ago(p.last)}${p.lastScore!=null?` · 최근 ${Math.round(p.lastScore*100)}%`:''}</span></div>
